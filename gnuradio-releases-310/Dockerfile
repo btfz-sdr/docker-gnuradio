@@ -3,50 +3,49 @@ LABEL maintainer="Federico 'Larroca' La rocca - flarroca@fing.edu.uy"
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-RUN sed -i -e 's@http://.*.ubuntu.com@http://mirrors.tuna.tsinghua.edu.cn@g' -e 's@https://.*.ubuntu.com@https://mirrors.tuna.tsinghua.edu.cn@g' /etc/apt/sources.list
+# 替换为阿里云Ubuntu镜像源（适用于各版本Ubuntu）
+RUN sed -i s@/archive.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list && \
+    sed -i s@/security.ubuntu.com/@/mirrors.aliyun.com/@g /etc/apt/sources.list
 
 RUN apt-get update
 
-# else it will output an error about Gtk namespace not found
-RUN apt-get install -y gir1.2-gtk-3.0
+# 安装核心依赖和中文支持
+RUN apt-get install -y gir1.2-gtk-3.0 software-properties-common sudo language-pack-zh-hans fonts-droid-fallback ttf-wqy-zenhei ttf-wqy-microhei fonts-arphic-ukai fonts-arphic-uming
 
-# to have add-apt-repository available
-RUN apt-get install -y software-properties-common
+# 生成中文UTF-8编码（需root权限，必须在切换用户前执行）
+RUN locale-gen zh_CN.UTF-8
 
-#RUN add-apt-repository -y ppa:gnuradio/gnuradio-releases
-
-# create user gnuario with sudo (and password gnuradio)
-RUN apt-get install -y sudo
+# 创建 gnuradio 用户
 RUN useradd --create-home --shell /bin/bash -G sudo gnuradio
 RUN echo 'gnuradio:gnuradio' | chpasswd
 
-# I create a dir at home which I'll use to persist after the container is closed (need to change it's ownership)
-RUN mkdir /home/gnuradio/persistent  && chown gnuradio /home/gnuradio/persistent
+# 创建持久化目录并设置权限
+RUN mkdir /home/gnuradio/persistent && chown gnuradio:gnuradio /home/gnuradio/persistent
 
+# 安装其他软件包
 RUN apt-get update
+RUN apt-get install -y gnuradio gnuradio-dev cmake git libboost-all-dev libcppunit-dev liblog4cpp5-dev python3-pygccxml pybind11-dev liborc-dev python3-pip libgsl-dev clang-format gr-osmosdr hackrf libhackrf-dev libhackrf0 vim zsh wget gedit libuhd-dev uhd-host
 
-RUN apt-get install -y gnuradio
-
-# installing other packages needed for downloading and installing OOT modules
-RUN apt-get install -y gnuradio-dev cmake git libboost-all-dev libcppunit-dev liblog4cpp5-dev python3-pygccxml pybind11-dev liborc-dev python3-pip libgsl-dev clang-format
-
-RUN apt-get install -y gr-osmosdr hackrf libhackrf-dev libhackrf0
-
-# of course, nothing useful can be done without vim
-RUN apt-get install -y vim zsh wget gedit
-
-# chinese language
-RUN apt-get install -y language-pack-zh-hans
-RUN apt-get install -y fonts-droid-fallback ttf-wqy-zenhei ttf-wqy-microhei fonts-arphic-ukai fonts-arphic-uming
-
+# 切换到 gnuradio 用户
 USER gnuradio
 
+# 在 gnuradio 用户下进行语言环境设置
+# 将 LANG 环境变量设置添加到 .bashrc 和 .zshrc
+RUN echo "export LANG=zh_CN.UTF-8" >> /home/gnuradio/.bashrc
+RUN echo "export LANGUAGE=zh_CN:zh" >> /home/gnuradio/.bashrc
+RUN echo "export LC_ALL=zh_CN.UTF-8" >> /home/gnuradio/.bashrc
+
+RUN echo "export LANG=zh_CN.UTF-8" >> /home/gnuradio/.zshrc
+RUN echo "export LANGUAGE=zh_CN:zh" >> /home/gnuradio/.zshrc
+RUN echo "export LC_ALL=zh_CN.UTF-8" >> /home/gnuradio/.zshrc
+
+# 设置工作目录
 WORKDIR /home/gnuradio
 
-# ohmyzsh
+# 安装 oh-my-zsh (会用到 wget)
 RUN sh -c "$(wget -O- https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"
 
+# 设置 PYTHONPATH
+ENV PYTHONPATH="/usr/local/lib/python3/dist-packages"
 
-ENV PYTHONPATH "${PYTHONPATH}:/usr/local/lib/python3/dist-packages"
-
-CMD bash
+CMD ["zsh"]

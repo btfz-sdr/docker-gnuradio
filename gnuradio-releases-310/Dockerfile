@@ -25,6 +25,7 @@ RUN mkdir /home/gnuradio/persistent && chown gnuradio:gnuradio /home/gnuradio/pe
 # 安装其他软件包
 RUN apt-get update
 RUN apt-get install -y gnuradio gnuradio-dev cmake git libboost-all-dev libcppunit-dev liblog4cpp5-dev python3-pygccxml pybind11-dev liborc-dev python3-pip libgsl-dev clang-format gr-osmosdr hackrf libhackrf-dev libhackrf0 vim zsh wget gedit libuhd-dev uhd-host
+RUN apt-get install -y alsa-utils pulseaudio-utils sox
 
 # 切换到 gnuradio 用户
 USER gnuradio
